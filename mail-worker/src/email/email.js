@@ -134,9 +134,9 @@ export async function email(message, env, ctx) {
 
 		if (ruleType === settingConst.ruleType.RULE) {
 
-			const emails = ruleEmail.split(',');
+			const pattern = new RegExp(ruleEmail);
 
-			if (!emails.includes(message.to)) {
+			if (!pattern.test(message.to)) {
 				return;
 			}
 
