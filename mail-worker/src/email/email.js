@@ -10,6 +10,7 @@ import emailUtils from '../utils/email-utils';
 import roleService from '../service/role-service';
 import userService from '../service/user-service';
 import telegramService from '../service/telegram-service';
+import { shouldForwardByRuleEmail } from './rule-email';
 
 export async function email(message, env, ctx) {
 
@@ -132,14 +133,8 @@ export async function email(message, env, ctx) {
 		emailRow = await emailService.completeReceive({ env }, account ? emailConst.status.RECEIVE : emailConst.status.NOONE, emailRow.emailId);
 
 
-		if (ruleType === settingConst.ruleType.RULE) {
-
-			const pattern = new RegExp(ruleEmail);
-
-			if (!pattern.test(message.to)) {
-				return;
-			}
-
+		if (!shouldForwardByRuleEmail(ruleType, ruleEmail, message.to)) {
+			return;
 		}
 
 		//转发到TG

@@ -1,13 +1,26 @@
 import KvConst from '../const/kv-const';
 import setting from '../entity/setting';
 import orm from '../entity/orm';
-import {verifyRecordType} from '../const/entity-const';
+import { verifyRecordType, settingConst } from '../const/entity-const';
 import fileUtils from '../utils/file-utils';
 import r2Service from './r2-service';
 import constant from '../const/constant';
 import BizError from '../error/biz-error';
 import {t} from '../i18n/i18n'
 import verifyRecordService from './verify-record-service';
+import { assertValidRuleEmail } from '../email/rule-email';
+
+export function hasExplicitRuleEmail(params) {
+	return Object.prototype.hasOwnProperty.call(params, 'ruleEmail');
+}
+
+export function shouldValidateRuleEmail(ruleType) {
+	return ruleType === settingConst.ruleType.RULE;
+}
+
+export function getEffectiveRuleEmail(params, settingData) {
+	return hasExplicitRuleEmail(params) ? params.ruleEmail : settingData.ruleEmail;
+}
 
 const settingService = {
 
@@ -112,6 +125,8 @@ const settingService = {
 
 	async set(c, params) {
 		const settingData = await this.query(c);
+		const ruleType = params.ruleType ?? settingData.ruleType;
+		const ruleEmail = getEffectiveRuleEmail(params, settingData);
 		let resendTokens = { ...settingData.resendTokens, ...params.resendTokens };
 		Object.keys(resendTokens).forEach(domain => {
 			if (!resendTokens[domain]) delete resendTokens[domain];
@@ -119,6 +134,14 @@ const settingService = {
 
 		if (Array.isArray(params.emailPrefixFilter)) {
 			params.emailPrefixFilter = params.emailPrefixFilter + '';
+		}
+
+		if (hasExplicitRuleEmail(params) && typeof params.ruleEmail !== 'string') {
+			throw new BizError(t('invalidRuleEmail'), 400);
+		}
+
+		if (shouldValidateRuleEmail(ruleType)) {
+			assertValidRuleEmail(ruleEmail);
 		}
 
 		params.resendTokens = JSON.stringify(resendTokens);

@@ -578,8 +578,7 @@
           </div>
         </template>
         <div class="forward-set-body">
-          <el-input-tag :placeholder="$t('ruleEmailsInputDesc')" tag-type="success" v-model="ruleEmail"
-                        @add-tag="ruleEmailAddTag"/>
+          <el-input :placeholder="$t('ruleEmailsInputDesc')" v-model="ruleEmail" clearable/>
         </div>
         <template #footer>
           <div class="dialog-footer">
@@ -845,7 +844,7 @@ const forwardStatus = ref(0)
 const emailColumnWidth = ref(0)
 const tokenColumnWidth = ref(0)
 const ruleType = ref(0)
-const ruleEmail = ref([])
+const ruleEmail = ref('')
 const tgMsgFrom = ref('')
 const tgMsgTo = ref('')
 const tgMsgText = ref('')
@@ -1027,11 +1026,7 @@ function openEmailPrefix() {
 
 function openForwardRules() {
   ruleType.value = setting.value.ruleType
-  ruleEmail.value = []
-  if (setting.value.ruleEmail) {
-    const list = setting.value.ruleEmail.split(',')
-    ruleEmail.value.push(...list)
-  }
+  ruleEmail.value = setting.value.ruleEmail || ''
   forwardRulesShow.value = true
 }
 
@@ -1045,20 +1040,6 @@ function emailAddTag(val) {
   emails.forEach(email => {
     if (isEmail(email) && !forwardEmail.value.includes(email)) {
       forwardEmail.value.push(email)
-    }
-  })
-}
-
-function ruleEmailAddTag(val) {
-  const emails = Array.from(new Set(
-      val.split(/[,，]/).map(item => item.trim()).filter(item => item)
-  ));
-
-  ruleEmail.value.splice(ruleEmail.value.length - 1, 1)
-
-  emails.forEach(email => {
-    if (isEmail(email) && !ruleEmail.value.includes(email)) {
-      ruleEmail.value.push(email)
     }
   })
 }
@@ -1130,8 +1111,23 @@ function forwardEmailSave() {
 
 
 function ruleEmailSave() {
+  const ruleEmailValue = ruleEmail.value.trim()
+
+  if (ruleType.value === 1 && ruleEmailValue) {
+    try {
+      new RegExp(ruleEmailValue)
+    } catch {
+      ElMessage({
+        message: t('invalidRuleEmailRegexMsg'),
+        type: 'error',
+        plain: true
+      })
+      return
+    }
+  }
+
   const form = {
-    ruleEmail: ruleEmail.value + '',
+    ruleEmail: ruleEmailValue,
     ruleType: ruleType.value
   }
   editSetting(form)
